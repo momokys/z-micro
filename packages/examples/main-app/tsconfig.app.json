@@ -20,5 +20,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["typings/env.d.ts","**/*.vue", "**/*.tsx", "**/*.ts", "**/package.json"]
+  "include": ["env.d.ts","**/*.vue", "**/*.tsx", "**/*.ts", "**/package.json"]
 }
