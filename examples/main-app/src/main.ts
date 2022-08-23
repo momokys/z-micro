@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { createMicro } from 'zan-micro'
+import { createMicro } from '@zan-micro/core'
 
 import App from './App.vue'
 import router from './router'
