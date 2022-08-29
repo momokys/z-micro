@@ -1,6 +1,19 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
+// import mc from '@/micro'
+// import { onMounted } from 'vue'
+//
+// mc.setupApp({
+//   name: 'vue3-app',
+//   host: 'http://localhost:7500',
+//   uri: '',
+//   keepAlive: true,
+// })
+//
+// onMounted(() => {
+//   mc.startApp('vue3-app')
+// })
 </script>
 
 <template>
@@ -12,11 +25,10 @@ import HelloWorld from './components/HelloWorld.vue'
 
       <nav>
         <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
+        <RouterLink to="/micro">Micro</RouterLink>
       </nav>
     </div>
   </header>
-
   <RouterView />
 </template>
 

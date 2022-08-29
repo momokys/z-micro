@@ -4,7 +4,7 @@
   "license": "MIT",
   "scripts": {
     "bootstrap": "pnpm i",
-    "dev": "pnpm -F main-app run dev",
+    "dev:main": "pnpm -F main-app run dev",
     "build": "pnpm run build -F zan-micro",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },

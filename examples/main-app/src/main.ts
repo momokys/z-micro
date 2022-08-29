@@ -1,13 +1,14 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import { createMicro } from '@zan-micro/core'
+import { defineMicroApp, defineMicroContainer } from '@zan-micro/core'
 
 import App from './App.vue'
 import router from './router'
 
 import './assets/main.css'
 
-createMicro()
+defineMicroApp()
+defineMicroContainer()
 
 const app = createApp(App)
 
