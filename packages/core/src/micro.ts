@@ -1,5 +1,8 @@
 import { Sandbox } from './sandbox'
 import { loader } from './loader'
+import { documentProxyProperties } from './common'
+import logger from './logger'
+import { patchRelativeURL } from "./util";
 
 // export type MicroAppOptions = {
 //   name: string
@@ -9,18 +12,13 @@ import { loader } from './loader'
 // }
 
 export class MicroApp extends HTMLElement {
-  // @ts-ignore
-  private _name = ''
-  // @ts-ignore
-  private _host: string
-  // @ts-ignore
-  private _uri: string
-  // @ts-ignore
-  private _keepAlive = true
-  // @ts-ignore
-  private _isActive = false
+  public name: string
+  public host: string
+  public uri: string
+  public keepAlive = true
+  private _template: string
+  private _active: boolean
   private _sandbox?: Sandbox
-  // @ts-ignore
   private _shadowRoot?: ShadowRoot
 
   static get observedAttributes() {
@@ -32,6 +30,8 @@ export class MicroApp extends HTMLElement {
     this.name = this.getAttribute('name') ?? ''
     this.host = this.getAttribute('host') ?? ''
     this.uri = this.getAttribute('uri') ?? ''
+    this._template = ''
+    this._active = false
     console.log(this)
   }
 
@@ -39,11 +39,23 @@ export class MicroApp extends HTMLElement {
     ;(async () => {
       this.createShadow()
       await this.createSandbox()
+
+      const { template, scripts } = await loader(this.host, this.uri)
+      this._template = template
+        .replace(/<!--([\s\S]*?)-->/g, '')
+        .replace(/(<script.*?\/?>(?:[\s\S]*?<\/script>)?)/g, '<!-- $1 -->')
+
+      const document = this._sandbox!.iframe!.contentDocument!
+      const html = document.createElement('html')
+      html.innerHTML = this._template
+      this._shadowRoot!.appendChild(html)
+      this._shadowRoot!.head = this._shadowRoot?.querySelector('head')
+      this._shadowRoot!.body = this._shadowRoot?.querySelector('body')
+      this._sandbox?.execScripts(scripts)
     })()
   }
 
   attributeChangedCallback(name: string, oldVal: any, newVal: any) {
-    console.log(name)
     // @ts-ignore
     this[name] = newVal
     this.setAttribute(name, newVal)
@@ -61,7 +73,6 @@ export class MicroApp extends HTMLElement {
     const iframeDocument = iframe.contentDocument!
     const shadowRoot = this._shadowRoot!
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const proxyDocument = new Proxy<Document | ShadowRoot>({} as Document | ShadowRoot, {
       // eslint-disable-next-line @typescript-eslint/ban-types
       get(target: {}, p: string | symbol): any {
@@ -103,75 +114,49 @@ export class MicroApp extends HTMLElement {
         return shadowRoot[p]
       },
     })
-    console.log(iframeWindow.document)
-    const shadowMethods = [
-      'append',
-      'contains',
-      'getSelection',
-      'elementFromPoint',
-      'elementsFromPoint',
-      'getAnimations',
-      'replaceChildren',
-    ]
-    shadowMethods.forEach((key) => {
-      Object.defineProperty(iframeWindow.document, key, {
+
+    const { modifyProperties, shadowProperties, shadowMethods, documentProperties, documentMethods, ownerProperties } =
+      documentProxyProperties
+    modifyProperties.concat(shadowProperties, shadowMethods, documentProperties, documentMethods).forEach((propKey) => {
+      const descriptor = Object.getOwnPropertyDescriptor(iframeWindow.Document.prototype, propKey) || {
+        enumerable: true,
+        writable: true,
+      }
+      try {
+        Object.defineProperty(iframeWindow.Document.prototype, propKey, {
+          enumerable: descriptor.enumerable,
+          configurable: true,
+          get: () => proxyDocument[propKey],
+          set: undefined,
+        })
+      } catch (e) {
+        console.error(e)
+      }
+    })
+
+    ownerProperties.forEach((propKey) => {
+      Object.defineProperty<Document>(iframeWindow.document, propKey, {
         enumerable: true,
         configurable: true,
         // @ts-ignore
-        get: () => {
-          console.log(key)
-          // @ts-ignore
-          return proxyDocument[key]
-        },
+        get: () => proxyDocument[propKey],
+        set: undefined,
       })
     })
 
-    const { scripts } = await loader(this.host, this.uri)
-    await sandbox.execScripts(scripts)
+    this._sandbox = sandbox
   }
 
   public active() {
-    this._isActive = true
+    this._active = true
   }
 
   public sleep() {
-    this._isActive = false
+    this._active = false
   }
 
   public isActive() {
-    return this._isActive
-  }
-
-  get name(): string {
-    return this._name
-  }
-
-  set name(value: string) {
-    this._name = value
-  }
-
-  get host(): string {
-    return this._host
-  }
-
-  set host(value: string) {
-    this._host = value
-  }
-
-  get uri(): string {
-    return this._uri
-  }
-
-  set uri(value: string) {
-    this._uri = value
-  }
-
-  get keepAlive(): boolean {
-    return this._keepAlive
-  }
-
-  set keepAlive(value: boolean) {
-    this._keepAlive = value
+    return this._active
   }
 }
 

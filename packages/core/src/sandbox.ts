@@ -1,4 +1,5 @@
-import logger from './logger'
+import { rawDocumentQuerySelector } from './common'
+import { patchRelativeURL } from './util'
 
 export class Sandbox {
   public iframe: HTMLIFrameElement
@@ -10,6 +11,7 @@ export class Sandbox {
 
   public async execScripts(scripts: { src?: string; type?: string; code?: string }[]) {
     await Sandbox.waitIframeLoad(this.iframe)
+    const iframeWindow = this.iframe.contentWindow!
     const iframeDocument = this.iframe.contentDocument!
     scripts.forEach((script) => {
       const scriptEl = iframeDocument.createElement('script')
@@ -17,7 +19,8 @@ export class Sandbox {
       Object.entries(attr).forEach(([key, value]) => {
         scriptEl.setAttribute(key, value)
       })
-      iframeDocument.head.appendChild(scriptEl)
+      const head = rawDocumentQuerySelector.call(iframeWindow.document, 'head')!
+      head.appendChild(scriptEl)
     })
   }
 
@@ -33,8 +36,8 @@ export class Sandbox {
 
   public static async initIframe(iframe: HTMLIFrameElement, host: string, uri: string) {
     await Sandbox.waitIframeLoad(iframe)
+    Sandbox.patch(iframe)
     const iframeDocumnt = iframe.contentDocument!
-    logger.info(iframeDocumnt.firstChild)
     if (iframeDocumnt.firstChild) {
       iframeDocumnt.removeChild(iframeDocumnt.firstChild)
     }
@@ -47,7 +50,7 @@ export class Sandbox {
   <div id="app"></div>
 </body>
     `
-    iframeDocumnt.appendChild(html)
+    iframeDocumnt.append(html)
   }
 
   public static async waitIframeLoad(iframe: HTMLIFrameElement) {
@@ -64,5 +67,15 @@ export class Sandbox {
       }
       loop()
     })
+  }
+
+  public static patch(iframe: HTMLIFrameElement) {
+    const iframeWindow = iframe.contentWindow!
+
+    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLImageElement, 'src')
+    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLAnchorElement, 'href')
+    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLSourceElement, 'src')
+    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLLinkElement, 'href')
+    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLScriptElement, 'src')
   }
 }
