@@ -1,59 +1,59 @@
 import { rawDocumentQuerySelector } from './common'
 import { patchRelativeURL } from './util'
+import { createScheduler, Scheduler } from './scheduler'
 
 export class Sandbox {
   public iframe: HTMLIFrameElement
+  // @ts-ignore
+  public sandboxWindow: Window
+  // @ts-ignore
+  public sandboxDocument: Document
+  private readonly _scheduler: Scheduler
 
-  constructor(name: string, host: string, uri: string) {
+  constructor(name: string) {
     this.iframe = Sandbox.createIframe(name)
-    Sandbox.initIframe(this.iframe, host, uri)
+    this._scheduler = createScheduler()
   }
 
   public async execScripts(scripts: { src?: string; type?: string; code?: string }[]) {
-    await Sandbox.waitIframeLoad(this.iframe)
-    const iframeWindow = this.iframe.contentWindow!
-    const iframeDocument = this.iframe.contentDocument!
     scripts.forEach((script) => {
-      const scriptEl = iframeDocument.createElement('script')
-      const attr = { ...script, style: 'display: none' }
-      Object.entries(attr).forEach(([key, value]) => {
-        scriptEl.setAttribute(key, value)
+      this._scheduler(() => {
+        const scriptEl = this.sandboxDocument.createElement('script')
+        const attr = { ...script, style: 'display: none' }
+        Object.entries(attr).forEach(([key, value]) => {
+          scriptEl.setAttribute(key, value)
+        })
+        const head = rawDocumentQuerySelector.call(this.sandboxWindow.document, 'head')!
+        head.appendChild(scriptEl)
       })
-      const head = rawDocumentQuerySelector.call(iframeWindow.document, 'head')!
-      head.appendChild(scriptEl)
     })
   }
 
-  public static createIframe(name: string) {
-    const iframe = window.document.createElement('iframe')
-    const attr = { style: 'display: none', src: `${window.location.protocol}//${window.location.host}`, name }
-    Object.entries(attr).forEach(([key, value]) => {
-      iframe.setAttribute(key, value)
-    })
-    window.document.body.appendChild(iframe)
-    return iframe
-  }
-
-  public static async initIframe(iframe: HTMLIFrameElement, host: string, uri: string) {
-    await Sandbox.waitIframeLoad(iframe)
-    Sandbox.patch(iframe)
-    const iframeDocumnt = iframe.contentDocument!
-    if (iframeDocumnt.firstChild) {
-      iframeDocumnt.removeChild(iframeDocumnt.firstChild)
+  public async init(host: string, uri: string) {
+    await this.waitIframeLoad()
+    this.patch()
+    this.sandboxWindow = this.iframe.contentWindow!
+    this.sandboxDocument = this.iframe.contentDocument!
+    if (this.sandboxDocument.firstChild) {
+      this.sandboxDocument.removeChild(this.sandboxDocument.firstChild)
     }
-    const html = iframeDocumnt.createElement('html')
+    const html = this.sandboxDocument.createElement('html')
+    if (this.sandboxDocument.firstElementChild) {
+      this.sandboxDocument.firstElementChild.appendChild(html)
+    } else {
+      this.sandboxDocument.append(html)
+    }
     html.innerHTML = `
 <head>
   <base href="${host}${uri}">
 </head>
 <body>
-  <div id="app"></div>
 </body>
     `
-    iframeDocumnt.append(html)
   }
 
-  public static async waitIframeLoad(iframe: HTMLIFrameElement) {
+  public async waitIframeLoad() {
+    const iframe = this.iframe
     return new Promise<void>((resolve) => {
       const loop = () => {
         setTimeout(() => {
@@ -69,13 +69,23 @@ export class Sandbox {
     })
   }
 
-  public static patch(iframe: HTMLIFrameElement) {
-    const iframeWindow = iframe.contentWindow!
+  public patch() {
+    const iframeWindow = this.iframe.contentWindow!
 
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLImageElement, 'src')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLAnchorElement, 'href')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLSourceElement, 'src')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLLinkElement, 'href')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLScriptElement, 'src')
+  }
+
+  public static createIframe(name: string) {
+    const iframe = window.document.createElement('iframe')
+    const attr = { style: 'display: none', src: `${window.location.protocol}//${window.location.host}`, name }
+    Object.entries(attr).forEach(([key, value]) => {
+      iframe.setAttribute(key, value)
+    })
+    window.document.body.appendChild(iframe)
+    return iframe
   }
 }

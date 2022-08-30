@@ -1,15 +1,6 @@
 import { Sandbox } from './sandbox'
 import { loader } from './loader'
 import { documentProxyProperties } from './common'
-import logger from './logger'
-import { patchRelativeURL } from "./util";
-
-// export type MicroAppOptions = {
-//   name: string
-//   host: string
-//   uri: string
-//   keepAlive: boolean
-// }
 
 export class MicroApp extends HTMLElement {
   public name: string
@@ -32,14 +23,12 @@ export class MicroApp extends HTMLElement {
     this.uri = this.getAttribute('uri') ?? ''
     this._template = ''
     this._active = false
-    console.log(this)
   }
 
   connectedCallback() {
+    this.createShadow()
     ;(async () => {
-      this.createShadow()
       await this.createSandbox()
-
       const { template, scripts } = await loader(this.host, this.uri)
       this._template = template
         .replace(/<!--([\s\S]*?)-->/g, '')
@@ -49,8 +38,11 @@ export class MicroApp extends HTMLElement {
       const html = document.createElement('html')
       html.innerHTML = this._template
       this._shadowRoot!.appendChild(html)
+      // @ts-ignore
       this._shadowRoot!.head = this._shadowRoot?.querySelector('head')
+      // @ts-ignore
       this._shadowRoot!.body = this._shadowRoot?.querySelector('body')
+
       this._sandbox?.execScripts(scripts)
     })()
   }
@@ -66,11 +58,10 @@ export class MicroApp extends HTMLElement {
   }
 
   public async createSandbox() {
-    const sandbox = new Sandbox(this.name, this.host, this.uri)
-    const iframe = sandbox.iframe
-    await Sandbox.waitIframeLoad(iframe)
-    const iframeWindow = iframe.contentWindow!
-    const iframeDocument = iframe.contentDocument!
+    const sandbox = new Sandbox(this.name)
+    await sandbox.init(this.host, this.uri)
+    const sandboxWindow = sandbox.sandboxWindow
+    const sandboxDocument = sandbox.sandboxDocument
     const shadowRoot = this._shadowRoot!
 
     const proxyDocument = new Proxy<Document | ShadowRoot>({} as Document | ShadowRoot, {
@@ -80,7 +71,7 @@ export class MicroApp extends HTMLElement {
           // @ts-ignore
           return new Proxy(window.document[p], {
             apply(target: any, _ctx: any, args: any[]): any {
-              return target.apply(iframeDocument, args)
+              return target.apply(sandboxDocument, args)
             },
           })
         }
@@ -94,7 +85,7 @@ export class MicroApp extends HTMLElement {
             apply(querySelectorAll, _ctx, args) {
               let arg = args[0]
               if (p === 'getElementsByTagName' && arg === 'script') {
-                return iframeDocument.querySelectorAll('script')
+                return sandboxDocument.querySelectorAll('script')
               }
               if (p === 'getElementsByClassName') arg = '.' + arg
               if (p === 'getElementsByName') arg = `[name="${arg}"]`
@@ -118,14 +109,15 @@ export class MicroApp extends HTMLElement {
     const { modifyProperties, shadowProperties, shadowMethods, documentProperties, documentMethods, ownerProperties } =
       documentProxyProperties
     modifyProperties.concat(shadowProperties, shadowMethods, documentProperties, documentMethods).forEach((propKey) => {
-      const descriptor = Object.getOwnPropertyDescriptor(iframeWindow.Document.prototype, propKey) || {
+      const descriptor = Object.getOwnPropertyDescriptor(sandboxWindow.window.Document.prototype, propKey) || {
         enumerable: true,
         writable: true,
       }
       try {
-        Object.defineProperty(iframeWindow.Document.prototype, propKey, {
+        Object.defineProperty(sandboxWindow.window.Document.prototype, propKey, {
           enumerable: descriptor.enumerable,
           configurable: true,
+          // @ts-ignore
           get: () => proxyDocument[propKey],
           set: undefined,
         })
@@ -135,7 +127,7 @@ export class MicroApp extends HTMLElement {
     })
 
     ownerProperties.forEach((propKey) => {
-      Object.defineProperty<Document>(iframeWindow.document, propKey, {
+      Object.defineProperty<Document>(sandboxWindow.document, propKey, {
         enumerable: true,
         configurable: true,
         // @ts-ignore

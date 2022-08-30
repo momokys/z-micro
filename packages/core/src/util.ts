@@ -25,6 +25,7 @@ export function patchRelativeURL(
       return get.call(this)
     },
     set: function (href) {
+      console.log(this.baseURI)
       set.call(this, getAbsolutePath(href, this.baseURI))
     },
   })
