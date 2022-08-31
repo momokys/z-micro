@@ -1,16 +1,16 @@
 import { Sandbox } from './sandbox'
 import { loader } from './loader'
-import { documentProxyProperties } from './common'
+import { documentProxyProperties, rawAppendChild } from './common'
+import { handleStylesheetElementPatch } from './util'
 
 export class MicroApp extends HTMLElement {
   public name: string
   public host: string
   public uri: string
   public keepAlive = true
-  private _template: string
   private _active: boolean
   private _sandbox?: Sandbox
-  private _shadowRoot?: ShadowRoot
+  private _shadowRoot?: ShadowRoot & { head: HTMLHeadElement; body: HTMLBodyElement }
 
   static get observedAttributes() {
     return ['name', 'host', 'uri', 'keepAlive']
@@ -21,28 +21,16 @@ export class MicroApp extends HTMLElement {
     this.name = this.getAttribute('name') ?? ''
     this.host = this.getAttribute('host') ?? ''
     this.uri = this.getAttribute('uri') ?? ''
-    this._template = ''
     this._active = false
   }
 
   connectedCallback() {
-    this.createShadow()
     ;(async () => {
+      this.createShadow()
       await this.createSandbox()
+      this.link()
       const { template, scripts } = await loader(this.host, this.uri)
-      this._template = template
-        .replace(/<!--([\s\S]*?)-->/g, '')
-        .replace(/(<script.*?\/?>(?:[\s\S]*?<\/script>)?)/g, '<!-- $1 -->')
-
-      const document = this._sandbox!.iframe!.contentDocument!
-      const html = document.createElement('html')
-      html.innerHTML = this._template
-      this._shadowRoot!.appendChild(html)
-      // @ts-ignore
-      this._shadowRoot!.head = this._shadowRoot?.querySelector('head')
-      // @ts-ignore
-      this._shadowRoot!.body = this._shadowRoot?.querySelector('body')
-
+      this.renderTemplateToShadow(template)
       this._sandbox?.execScripts(scripts)
     })()
   }
@@ -53,17 +41,68 @@ export class MicroApp extends HTMLElement {
     this.setAttribute(name, newVal)
   }
 
-  public createShadow() {
+  private createShadow() {
     this._shadowRoot = this.attachShadow({ mode: 'open' })
   }
 
-  public async createSandbox() {
+  private async createSandbox() {
     const sandbox = new Sandbox(this.name)
     await sandbox.init(this.host, this.uri)
-    const sandboxWindow = sandbox.sandboxWindow
-    const sandboxDocument = sandbox.sandboxDocument
-    const shadowRoot = this._shadowRoot!
+    this._sandbox = sandbox
+  }
 
+  private renderTemplateToShadow(template: string) {
+    const document = this._sandbox!.iframe!.contentDocument!
+    const html = document.createElement('html')
+    html.innerHTML = template
+      .replace(/<!--([\s\S]*?)-->/g, '')
+      .replace(/(<script.*?\/?>(?:[\s\S]*?<\/script>)?)/g, '<!-- $1 -->')
+    this._shadowRoot!.appendChild(html)
+    // @ts-ignore
+    this._shadowRoot!.head = this._shadowRoot?.querySelector('head')
+    // @ts-ignore
+    this._shadowRoot!.body = this._shadowRoot?.querySelector('body')
+
+    this.patch()
+  }
+
+  private link() {
+    const sandboxWindow = this._sandbox!.sandboxWindow
+    const proxyDocument = this.proxy().proxyDocument
+    const { modifyProperties, shadowProperties, shadowMethods, documentProperties, documentMethods, ownerProperties } =
+      documentProxyProperties
+    modifyProperties.concat(shadowProperties, shadowMethods, documentProperties, documentMethods).forEach((propKey) => {
+      const descriptor = Object.getOwnPropertyDescriptor(sandboxWindow.window.Document.prototype, propKey) || {
+        enumerable: true,
+        writable: true,
+      }
+      try {
+        Object.defineProperty(sandboxWindow.window.Document.prototype, propKey, {
+          enumerable: descriptor.enumerable,
+          configurable: true,
+          // @ts-ignore
+          get: () => proxyDocument[propKey],
+          set: undefined,
+        })
+      } catch (e) {
+        console.error(e)
+      }
+    })
+
+    ownerProperties.forEach((propKey) => {
+      Object.defineProperty<Document>(sandboxWindow.document, propKey, {
+        enumerable: true,
+        configurable: true,
+        // @ts-ignore
+        get: () => proxyDocument[propKey],
+        set: undefined,
+      })
+    })
+  }
+
+  private proxy() {
+    const sandboxDocument = this._sandbox!.sandboxDocument
+    const shadowRoot = this._shadowRoot!
     const proxyDocument = new Proxy<Document | ShadowRoot>({} as Document | ShadowRoot, {
       // eslint-disable-next-line @typescript-eslint/ban-types
       get(target: {}, p: string | symbol): any {
@@ -105,38 +144,28 @@ export class MicroApp extends HTMLElement {
         return shadowRoot[p]
       },
     })
+    return {
+      proxyDocument,
+    }
+  }
 
-    const { modifyProperties, shadowProperties, shadowMethods, documentProperties, documentMethods, ownerProperties } =
-      documentProxyProperties
-    modifyProperties.concat(shadowProperties, shadowMethods, documentProperties, documentMethods).forEach((propKey) => {
-      const descriptor = Object.getOwnPropertyDescriptor(sandboxWindow.window.Document.prototype, propKey) || {
-        enumerable: true,
-        writable: true,
+  private patch() {
+    const shadowRoot = this._shadowRoot!
+    shadowRoot.head.appendChild = function <T extends Node>(node: T) {
+      const tagName = ((node as any).tagName ?? '').toUpperCase()
+      if (!['LINK', 'STYLE', 'SCRIPT', 'IFRAME'].includes(tagName)) {
+        return rawAppendChild.call(this, node) as T
       }
-      try {
-        Object.defineProperty(sandboxWindow.window.Document.prototype, propKey, {
-          enumerable: descriptor.enumerable,
-          configurable: true,
-          // @ts-ignore
-          get: () => proxyDocument[propKey],
-          set: undefined,
-        })
-      } catch (e) {
-        console.error(e)
+      const res = rawAppendChild.call(this, node)
+      switch (tagName) {
+        case 'STYLE':
+          handleStylesheetElementPatch(node as unknown as HTMLStyleElement, shadowRoot)
+          break
+        default:
       }
-    })
-
-    ownerProperties.forEach((propKey) => {
-      Object.defineProperty<Document>(sandboxWindow.document, propKey, {
-        enumerable: true,
-        configurable: true,
-        // @ts-ignore
-        get: () => proxyDocument[propKey],
-        set: undefined,
-      })
-    })
-
-    this._sandbox = sandbox
+      return res as T
+      // return rawAppendChild.call(this, newChild)
+    }
   }
 
   public active() {

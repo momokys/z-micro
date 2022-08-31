@@ -99,5 +99,9 @@ export const documentProxyProperties = {
   ownerProperties: ['head', 'body'],
 }
 
+export const cssSelectorMap = {
+  ':root': ':host',
+}
+
 export const rawAppendChild = Node.prototype.appendChild
 export const rawDocumentQuerySelector = Document.prototype.querySelector
