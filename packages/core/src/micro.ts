@@ -42,7 +42,7 @@ export class MicroApp extends HTMLElement {
   }
 
   private createShadow() {
-    this._shadowRoot = this.attachShadow({ mode: 'open' })
+    this._shadowRoot = this.attachShadow({ mode: 'open' }) as any
   }
 
   private async createSandbox() {
@@ -67,8 +67,18 @@ export class MicroApp extends HTMLElement {
   }
 
   private link() {
+    const shadowRoot = this._shadowRoot!
     const sandboxWindow = this._sandbox!.sandboxWindow
     const proxyDocument = this.proxy().proxyDocument
+
+    sandboxWindow.window.Document.prototype.addEventListener = function (
+      type: string,
+      handler: EventListenerOrEventListenerObject,
+      options?: boolean | AddEventListenerOptions,
+    ): void {
+      shadowRoot.addEventListener(type, handler, options)
+    }
+
     const { modifyProperties, shadowProperties, shadowMethods, documentProperties, documentMethods, ownerProperties } =
       documentProxyProperties
     modifyProperties.concat(shadowProperties, shadowMethods, documentProperties, documentMethods).forEach((propKey) => {
@@ -102,6 +112,7 @@ export class MicroApp extends HTMLElement {
 
   private proxy() {
     const sandboxDocument = this._sandbox!.sandboxDocument
+    const sandboxWindow = this._sandbox!.sandboxWindow
     const shadowRoot = this._shadowRoot!
     const proxyDocument = new Proxy<Document | ShadowRoot>({} as Document | ShadowRoot, {
       // eslint-disable-next-line @typescript-eslint/ban-types
@@ -110,7 +121,12 @@ export class MicroApp extends HTMLElement {
           // @ts-ignore
           return new Proxy(window.document[p], {
             apply(target: any, _ctx: any, args: any[]): any {
-              return target.apply(sandboxDocument, args)
+              const element = target.apply(sandboxDocument, args)
+              Object.defineProperty(element, 'ownerDocument', {
+                configurable: true,
+                get: () => sandboxWindow.document,
+              })
+              return element
             },
           })
         }
