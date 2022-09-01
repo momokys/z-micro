@@ -1,17 +1,18 @@
+import { App } from './model'
 import { Sandbox } from './sandbox'
 import { loader } from './loader'
 import { documentProxyProperties, rawAppendChild } from './common'
 import { handleStylesheetElementPatch } from './util'
 import { MicroContainer } from './container'
 
-export class MicroApp extends HTMLElement {
+export class MicroApp extends HTMLElement implements App {
   public name: string
   public host: string
   public uri: string
   public keepAlive = true
   private _active: boolean
   private _sandbox?: Sandbox
-  private _shadowRoot?: ShadowRoot & { head: HTMLHeadElement; body: HTMLBodyElement }
+  private _document?: (ShadowRoot | Document) & { head: HTMLHeadElement; body: HTMLBodyElement }
 
   static get observedAttributes() {
     return ['name', 'host', 'uri', 'keepAlive']
@@ -30,12 +31,14 @@ export class MicroApp extends HTMLElement {
     if (!parent || parent.tagName !== 'MICRO-CONTAINER') {
       console.warn('[zan-micro]: ', 'The parent element of micro-app must be micro-container')
     } else {
+      this._document = this.attachShadow({ mode: 'open' }) as any
+
       const container = parent as MicroContainer
       // 将 app 注册到 micro-container
       container.setupApp(this)
       ;(async () => {
-        this.createShadow()
-        await this.createSandbox()
+        this._sandbox = new Sandbox(this)
+        await this._sandbox.init()
         this.link()
         const { template, scripts } = await loader(this.host, this.uri)
         this.renderTemplateToShadow(template)
@@ -50,12 +53,8 @@ export class MicroApp extends HTMLElement {
     this.setAttribute(name, newVal)
   }
 
-  private createShadow() {
-    this._shadowRoot = this.attachShadow({ mode: 'open' }) as any
-  }
-
   private async createSandbox() {
-    const sandbox = new Sandbox(this.name)
+    const sandbox = new Sandbox(this.name, this)
     await sandbox.init(this.host, this.uri)
     this._sandbox = sandbox
   }
@@ -195,7 +194,6 @@ export class MicroApp extends HTMLElement {
         default:
       }
       return res as T
-      // return rawAppendChild.call(this, newChild)
     }
   }
 
@@ -209,6 +207,19 @@ export class MicroApp extends HTMLElement {
 
   public isActive() {
     return this._active
+  }
+
+  get sandbox(): Sandbox {
+    return this._sandbox!
+  }
+  set sandbox(value: Sandbox) {
+    console.warn('[zan-micro]: ', 'sandbox is read-only')
+  }
+  get document(): (Document | ShadowRoot) & { head: HTMLHeadElement; body: HTMLBodyElement } {
+    return this._document!
+  }
+  set document(value: (Document | ShadowRoot) & { head: HTMLHeadElement; body: HTMLBodyElement }) {
+    console.warn('[zan-micro]: ', 'document is read-only')
   }
 }
 

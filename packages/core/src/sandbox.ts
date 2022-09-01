@@ -1,63 +1,171 @@
-import { rawDocumentQuerySelector, windowProxyProperties } from './common'
-import { patchRelativeURL, isConstructor } from './util'
-import { createScheduler, Scheduler } from './scheduler'
+import { App } from './model'
+import { rawDocumentQuerySelector } from './common'
+import { isConstructor, getAbsolutePath } from './util'
+import { createScheduler } from './scheduler'
 
 export class Sandbox {
+  /**
+   * 需要代理到基座应用的 window 属性
+   * @private
+   */
+  private static PROXY_APP_WINDOW_PROPERTIES: any[] = ['getComputedStyle', 'visualViewport', 'matchMedia', 'DOMParser']
+  /**
+   * 子应用对象
+   */
+  public app: App
+  /**
+   * 沙箱载体
+   */
   public iframe: HTMLIFrameElement
-  // @ts-ignore
-  public sandboxWindow: Window
-  // @ts-ignore
-  public sandboxDocument: Document
 
-  public document: Document | ShadowRoot
-
-  private readonly _scheduler: Scheduler
-
-  constructor(name: string, document: Document | ShadowRoot) {
-    this.document = document
-    this.iframe = Sandbox.createIframe(name)
-    this._scheduler = createScheduler()
+  constructor(app: App) {
+    this.app = app
+    this.iframe = this.createIframe()
   }
 
   public async execScripts(scripts: { src?: string; type?: string; code?: string }[]) {
+    const scheduler = createScheduler()
     scripts.forEach((script) => {
-      this._scheduler(() => {
-        const scriptEl = this.sandboxDocument.createElement('script')
+      scheduler(() => {
+        const scriptEl = this.iframe.contentDocument!.createElement('script')
         const attr = { ...script, style: 'display: none' }
         Object.entries(attr).forEach(([key, value]) => {
           scriptEl.setAttribute(key, value)
         })
-        const head = rawDocumentQuerySelector.call(this.sandboxWindow.document, 'head')!
+        const head = rawDocumentQuerySelector.call(this.iframe.contentWindow!.document, 'head')!
         head.appendChild(scriptEl)
       })
     })
   }
 
-  public async init(host: string, uri: string) {
+  public async init() {
     await this.waitIframeLoad()
     this.patch()
-    this.sandboxWindow = this.iframe.contentWindow!
-    this.sandboxDocument = this.iframe.contentDocument!
-    if (this.sandboxDocument.firstChild) {
-      this.sandboxDocument.removeChild(this.sandboxDocument.firstChild)
+    this.initIframe()
+  }
+  /**
+   * 打补丁
+   * @private
+   */
+  private patch() {
+    this.proxyIframeWindowToMainApp()
+    this.patchRelativeURL()
+  }
+  /**
+   * 将 iframe 的 window 代理到基座应用
+   * @private
+   */
+  private proxyIframeWindowToMainApp() {
+    const sandboxWindow = this.iframe.contentWindow!
+    Sandbox.PROXY_APP_WINDOW_PROPERTIES.forEach((key) => {
+      const value = window[key]
+      Object.defineProperty(sandboxWindow, key, {
+        get(): any {
+          if (typeof value === 'function' && !isConstructor(value)) {
+            // @ts-ignore
+            return value.bind(window)
+          } else {
+            return value
+          }
+        },
+      })
+    })
+  }
+  /**
+   * 修复元素引用资源时 404 问题
+   * @private
+   */
+  private patchRelativeURL() {
+    this.rewriteElementURL(this.iframe.contentWindow!.window.HTMLImageElement, 'src')
+    this.rewriteElementURL(this.iframe.contentWindow!.window.HTMLAnchorElement, 'href')
+    this.rewriteElementURL(this.iframe.contentWindow!.window.HTMLSourceElement, 'src')
+    this.rewriteElementURL(this.iframe.contentWindow!.window.HTMLLinkElement, 'href')
+    this.rewriteElementURL(this.iframe.contentWindow!.window.HTMLScriptElement, 'src')
+  }
+  /**
+   * 重写元素引用资源URL的属性，如：href、src
+   * @param elementCtr 元素构造函数
+   * @param urlAttr 引用资源属性
+   * @private
+   */
+  private rewriteElementURL(
+    elementCtr:
+      | typeof HTMLImageElement
+      | typeof HTMLAnchorElement
+      | typeof HTMLSourceElement
+      | typeof HTMLLinkElement
+      | typeof HTMLScriptElement,
+    urlAttr: string,
+  ) {
+    // 重写设置资源 URL 为绝对 URL
+    const rawElementSetAttribute = this.iframe.contentWindow!.window.Element.prototype.setAttribute
+    elementCtr.prototype.setAttribute = function (name: string, value: string): void {
+      if (name === urlAttr) {
+        rawElementSetAttribute.call(this, name, getAbsolutePath(value, this.baseURI ?? ''))
+      }
     }
-    const html = this.sandboxDocument.createElement('html')
+
+    // 重写元素 URL 属性的读写
+    const rawAnchorElementHrefDescriptor = Object.getOwnPropertyDescriptor(elementCtr.prototype, urlAttr)!
+    const { enumerable, configurable, get, set } = rawAnchorElementHrefDescriptor
+    Object.defineProperty(elementCtr.prototype, urlAttr, {
+      enumerable,
+      configurable,
+      get: function () {
+        return get!.call(this)
+      },
+      set: function (href) {
+        set!.call(this, getAbsolutePath(href, this.baseURI))
+      },
+    })
+  }
+  /**
+   * 创建 iframe
+   * @private
+   */
+  private createIframe() {
+    const iframe = window.document.createElement('iframe')
+    const attr = {
+      style: 'display: none',
+      src: `${window.location.protocol}//${window.location.host}`,
+      name: this.app.name,
+    }
+    Object.entries(attr).forEach(([key, value]) => {
+      iframe.setAttribute(key, value)
+    })
+    window.document.body.appendChild(iframe)
+    return iframe
+  }
+  /**
+   * 初始化 iframe 的 DOM 结构
+   * @private
+   */
+  private initIframe() {
+    const sandboxDocument = this.iframe.contentDocument!
+    if (sandboxDocument.firstChild) {
+      sandboxDocument.removeChild(sandboxDocument.firstChild)
+    }
+    const html = sandboxDocument.createElement('html')
     // TODO 修复 append 报错，待优化
-    if (this.sandboxDocument.firstElementChild) {
-      this.sandboxDocument.firstElementChild.appendChild(html)
+    if (sandboxDocument.firstElementChild) {
+      sandboxDocument.firstElementChild.appendChild(html)
     } else {
-      this.sandboxDocument.append(html)
+      sandboxDocument.append(html)
     }
     html.innerHTML = `
 <head>
-  <base href="${host}${uri}">
+  <base href="${this.getURL()}">
+  <title></title>
 </head>
 <body>
 </body>
     `
   }
-
-  public async waitIframeLoad() {
+  /**
+   * 等待 iframe 初次加载完成
+   * @private
+   */
+  private async waitIframeLoad() {
     const iframe = this.iframe
     return new Promise<void>((resolve) => {
       const loop = () => {
@@ -73,40 +181,11 @@ export class Sandbox {
       loop()
     })
   }
-
-  public patch() {
-    const iframeWindow = this.iframe.contentWindow!
-    this.patchWindow(iframeWindow)
-    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLImageElement, 'src')
-    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLAnchorElement, 'href')
-    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLSourceElement, 'src')
-    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLLinkElement, 'href')
-    patchRelativeURL(iframeWindow, iframeWindow.window.HTMLScriptElement, 'src')
-  }
-
-  private patchWindow(iframeWindow: Window) {
-    windowProxyProperties.forEach((key) => {
-      const value = window[key]
-      Object.defineProperty(iframeWindow, key, {
-        get(): any {
-          if (typeof value === 'function' && !isConstructor(value)) {
-            // @ts-ignore
-            return value.bind(window)
-          } else {
-            return value
-          }
-        },
-      })
-    })
-  }
-
-  public static createIframe(name: string) {
-    const iframe = window.document.createElement('iframe')
-    const attr = { style: 'display: none', src: `${window.location.protocol}//${window.location.host}`, name }
-    Object.entries(attr).forEach(([key, value]) => {
-      iframe.setAttribute(key, value)
-    })
-    window.document.body.appendChild(iframe)
-    return iframe
+  /**
+   * 获取子应用 URL
+   * @private
+   */
+  private getURL() {
+    return this.app.host + this.app.uri
   }
 }

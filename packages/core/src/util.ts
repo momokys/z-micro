@@ -17,18 +17,16 @@ export function patchRelativeURL(
     rawElementSetAttribute.call(this, name, targetValue)
   }
 
-  const rawAnchorElementHrefDescriptor = Object.getOwnPropertyDescriptor(elementCtr.prototype, attr)
-  // @ts-ignore
+  const rawAnchorElementHrefDescriptor = Object.getOwnPropertyDescriptor(elementCtr.prototype, attr)!
   const { enumerable, configurable, get, set } = rawAnchorElementHrefDescriptor
   Object.defineProperty(elementCtr.prototype, attr, {
     enumerable,
     configurable,
     get: function () {
-      return get.call(this)
+      return get!.call(this)
     },
     set: function (href) {
-      console.log(this.baseURI)
-      set.call(this, getAbsolutePath(href, this.baseURI))
+      set!.call(this, getAbsolutePath(href, this.baseURI))
     },
   })
 }

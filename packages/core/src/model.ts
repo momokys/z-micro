@@ -1,6 +1,6 @@
 export interface App {
   name: string
-  url: string
-  window: Window
-  document: Document | ShadowRoot
+  host: string
+  uri: string
+  document: (ShadowRoot | Document) & { head: HTMLHeadElement; body: HTMLBodyElement }
 }
