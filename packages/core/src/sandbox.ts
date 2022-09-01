@@ -8,13 +8,39 @@ export class Sandbox {
    * 需要代理到基座应用的 window 属性
    * @private
    */
-  private static PROXY_APP_WINDOW_PROPERTIES: any[] = ['getComputedStyle', 'visualViewport', 'matchMedia', 'DOMParser']
+  private static PROXY_APP_WINDOW_PROPERTIES: any[] = [
+    'getComputedStyle',
+    'visualViewport',
+    'matchMedia',
+    'DOMParser',
+    'MouseEvent',
+    'FocusEvent',
+    'SubmitEvent',
+    'UIEvent',
+    'AnimationEvent',
+    'DragEvent',
+  ]
+  /**
+   * 需要代理到基座应用的 document 属性
+   * @private
+   */
   private static PROXY_APP_DOCUMENT_PROPERTIES: any[] = [
+    // 根元素代理到子应用的 document
+    'documentElement',
+    'scrollingElement',
+    // ownerDocument 代理到子应用 document
     'createElement',
     'createTextNode',
-    'implementation',
-    'documentElement',
+    // 获取元素方法代理到子应用 document
+    'getElementsByTagName',
+    'getElementsByClassName',
+    'getElementsByName',
+    'getElementById',
     'querySelector',
+    'querySelectorAll',
+    'forms',
+    'images',
+    'links',
   ]
   /**
    * 子应用对象
@@ -34,7 +60,7 @@ export class Sandbox {
     const scheduler = createScheduler()
     scripts.forEach((script) => {
       scheduler(() => {
-        const scriptEl = this.iframe.contentDocument!.createElement('script')
+        const scriptEl = document.createElement('script')
         const attr = { ...script, style: 'display: none' }
         Object.entries(attr).forEach(([key, value]) => {
           scriptEl.setAttribute(key, value)
@@ -50,13 +76,13 @@ export class Sandbox {
     this.patch()
     this.initIframe()
   }
-
   /**
    * 链接子应用
    */
   public link() {
     const app = this.app
     const sandboxWindow = this.iframe.contentWindow!
+    const proxyDocument = this.generateProxyDocument()
 
     sandboxWindow.window.Document.prototype.addEventListener = function (
       type: string,
@@ -66,15 +92,85 @@ export class Sandbox {
       app.document.addEventListener(type, handler, options)
     }
 
-    Sandbox.PROXY_APP_DOCUMENT_PROPERTIES.forEach(key => {
+    Sandbox.PROXY_APP_DOCUMENT_PROPERTIES.forEach((key) => {
       const descriptor = Object.getOwnPropertyDescriptor(sandboxWindow.window.Document.prototype, key) || {
         enumerable: true,
         writable: true,
       }
+      Object.defineProperty(sandboxWindow.window.Document.prototype, key, {
+        enumerable: descriptor.enumerable,
+        configurable: true,
+        set: undefined,
+        // @ts-ignore
+        get: () => proxyDocument[key],
+      })
+    })
+    ;['head', 'body'].forEach((key) => {
+      Object.defineProperty<Document>(sandboxWindow.document, key, {
+        enumerable: true,
+        configurable: true,
+        set: undefined,
+        // @ts-ignore
+        get: () => proxyDocument[key],
+      })
+    })
+  }
 
-      if (['createElement', 'createText'].includes(key)) {
-
-      }
+  /**
+   * 生成代理 document
+   * @private
+   */
+  private generateProxyDocument() {
+    const app = this.app
+    const sandboxDocument = this.iframe.contentDocument!
+    return new Proxy<Document | ShadowRoot>({} as Document | ShadowRoot, {
+      get(target: Document | ShadowRoot, key: string): any {
+        // ownerDocument 链接到子应用的 document
+        if (['createElement', 'createTextNode'].includes(key)) {
+          // @ts-ignore
+          return new Proxy(window.document[key], {
+            apply(target: any, _ctx: any, args: any[]): any {
+              const element = target.apply(sandboxDocument, args)
+              Object.defineProperty(element, 'ownerDocument', {
+                configurable: true,
+                get: () => sandboxDocument,
+              })
+              return element
+            },
+          })
+        }
+        if (
+          [
+            'getElementsByTagName',
+            'getElementsByClassName',
+            'getElementsByName',
+            'getElementById',
+            'querySelector',
+            'querySelectorAll',
+          ].includes(key)
+        ) {
+          // @ts-ignore
+          return new Proxy(app.document[key], {
+            apply(target, _ctx, args) {
+              const arg = args[0]
+              const flag =
+                (key === 'getElementsByTagName' && arg === 'script') ||
+                (key === 'querySelector' && arg === 'script') ||
+                (key === 'querySelectorAll' && arg === 'script')
+              _ctx = flag ? sandboxDocument : app.document
+              return target.call(_ctx, args)
+            },
+          })
+        }
+        if (['documentElement', 'scrollingElement'].includes(key)) {
+          return app.document.firstElementChild
+        }
+        if (key === 'forms') return app.document.querySelectorAll('form')
+        if (key === 'images') return app.document.querySelectorAll('img')
+        if (key === 'links') return app.document.querySelectorAll('a')
+        // @ts-ignore
+        return app.document[key]
+      },
     })
   }
   /**

@@ -1,51 +1,17 @@
 import { cssSelectorMap } from './common'
-
-export function patchRelativeURL(
-  target: Window,
-  elementCtr:
-    | typeof HTMLImageElement
-    | typeof HTMLAnchorElement
-    | typeof HTMLSourceElement
-    | typeof HTMLLinkElement
-    | typeof HTMLScriptElement,
-  attr: any,
-) {
-  const rawElementSetAttribute = target.window.Element.prototype.setAttribute
-  elementCtr.prototype.setAttribute = function (name: string, value: string): void {
-    let targetValue = value
-    if (name === attr) targetValue = getAbsolutePath(value, this.baseURI || '')
-    rawElementSetAttribute.call(this, name, targetValue)
-  }
-
-  const rawAnchorElementHrefDescriptor = Object.getOwnPropertyDescriptor(elementCtr.prototype, attr)!
-  const { enumerable, configurable, get, set } = rawAnchorElementHrefDescriptor
-  Object.defineProperty(elementCtr.prototype, attr, {
-    enumerable,
-    configurable,
-    get: function () {
-      return get!.call(this)
-    },
-    set: function (href) {
-      set!.call(this, getAbsolutePath(href, this.baseURI))
-    },
-  })
-}
+import { AppDocument } from './micro'
 
 /**
  * 样式元素的css变量处理
  */
-export function handleStylesheetElementPatch(
-  stylesheetElement: HTMLStyleElement,
-  shadowRoot: ShadowRoot & { head: HTMLHeadElement },
-) {
+export function handleStylesheetElementPatch(stylesheetElement: HTMLStyleElement, _document: AppDocument) {
   if (!stylesheetElement.innerHTML) return
-  // @ts-ignore
-  const [hostStyleSheetElement, fontStyleSheetElement] = getPatchStyleElements([stylesheetElement.sheet])
+  const [hostStyleSheetElement, fontStyleSheetElement] = getPatchStyleElements([stylesheetElement.sheet!])
   if (hostStyleSheetElement) {
-    shadowRoot.head.appendChild(hostStyleSheetElement)
+    _document.head.appendChild(hostStyleSheetElement)
   }
   if (fontStyleSheetElement) {
-    shadowRoot.host.appendChild(fontStyleSheetElement)
+    _document.host.appendChild(fontStyleSheetElement)
   }
 }
 
