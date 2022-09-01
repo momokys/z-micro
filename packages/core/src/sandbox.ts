@@ -9,6 +9,13 @@ export class Sandbox {
    * @private
    */
   private static PROXY_APP_WINDOW_PROPERTIES: any[] = ['getComputedStyle', 'visualViewport', 'matchMedia', 'DOMParser']
+  private static PROXY_APP_DOCUMENT_PROPERTIES: any[] = [
+    'createElement',
+    'createTextNode',
+    'implementation',
+    'documentElement',
+    'querySelector',
+  ]
   /**
    * 子应用对象
    */
@@ -42,6 +49,33 @@ export class Sandbox {
     await this.waitIframeLoad()
     this.patch()
     this.initIframe()
+  }
+
+  /**
+   * 链接子应用
+   */
+  public link() {
+    const app = this.app
+    const sandboxWindow = this.iframe.contentWindow!
+
+    sandboxWindow.window.Document.prototype.addEventListener = function (
+      type: string,
+      handler: EventListenerOrEventListenerObject,
+      options?: boolean | AddEventListenerOptions,
+    ): void {
+      app.document.addEventListener(type, handler, options)
+    }
+
+    Sandbox.PROXY_APP_DOCUMENT_PROPERTIES.forEach(key => {
+      const descriptor = Object.getOwnPropertyDescriptor(sandboxWindow.window.Document.prototype, key) || {
+        enumerable: true,
+        writable: true,
+      }
+
+      if (['createElement', 'createText'].includes(key)) {
+
+      }
+    })
   }
   /**
    * 打补丁
