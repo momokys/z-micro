@@ -1,5 +1,4 @@
 import { MicroApp } from './micro'
-import logger from './logger'
 
 export class MicroContainer extends HTMLElement {
   private microApps: Map<string, MicroApp>
@@ -23,6 +22,10 @@ export class MicroContainer extends HTMLElement {
   attributeChangedCallback(name: string, oldVal: any, newVal: any) {
     // @ts-ignore
     this[name] = newVal
+  }
+
+  public setupApp(app: MicroApp) {
+    this.microApps.set(app.name, app)
   }
 
   get active(): string {

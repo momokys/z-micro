@@ -1,5 +1,5 @@
-import { rawDocumentQuerySelector } from './common'
-import { patchRelativeURL } from './util'
+import { rawDocumentQuerySelector, windowProxyProperties } from './common'
+import { patchRelativeURL, isConstructor } from './util'
 import { createScheduler, Scheduler } from './scheduler'
 
 export class Sandbox {
@@ -8,9 +8,13 @@ export class Sandbox {
   public sandboxWindow: Window
   // @ts-ignore
   public sandboxDocument: Document
+
+  public document: Document | ShadowRoot
+
   private readonly _scheduler: Scheduler
 
-  constructor(name: string) {
+  constructor(name: string, document: Document | ShadowRoot) {
+    this.document = document
     this.iframe = Sandbox.createIframe(name)
     this._scheduler = createScheduler()
   }
@@ -38,6 +42,7 @@ export class Sandbox {
       this.sandboxDocument.removeChild(this.sandboxDocument.firstChild)
     }
     const html = this.sandboxDocument.createElement('html')
+    // TODO 修复 append 报错，待优化
     if (this.sandboxDocument.firstElementChild) {
       this.sandboxDocument.firstElementChild.appendChild(html)
     } else {
@@ -71,12 +76,28 @@ export class Sandbox {
 
   public patch() {
     const iframeWindow = this.iframe.contentWindow!
-
+    this.patchWindow(iframeWindow)
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLImageElement, 'src')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLAnchorElement, 'href')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLSourceElement, 'src')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLLinkElement, 'href')
     patchRelativeURL(iframeWindow, iframeWindow.window.HTMLScriptElement, 'src')
+  }
+
+  private patchWindow(iframeWindow: Window) {
+    windowProxyProperties.forEach((key) => {
+      const value = window[key]
+      Object.defineProperty(iframeWindow, key, {
+        get(): any {
+          if (typeof value === 'function' && !isConstructor(value)) {
+            // @ts-ignore
+            return value.bind(window)
+          } else {
+            return value
+          }
+        },
+      })
+    })
   }
 
   public static createIframe(name: string) {

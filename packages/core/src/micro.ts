@@ -2,6 +2,7 @@ import { Sandbox } from './sandbox'
 import { loader } from './loader'
 import { documentProxyProperties, rawAppendChild } from './common'
 import { handleStylesheetElementPatch } from './util'
+import { MicroContainer } from './container'
 
 export class MicroApp extends HTMLElement {
   public name: string
@@ -25,14 +26,22 @@ export class MicroApp extends HTMLElement {
   }
 
   connectedCallback() {
-    ;(async () => {
-      this.createShadow()
-      await this.createSandbox()
-      this.link()
-      const { template, scripts } = await loader(this.host, this.uri)
-      this.renderTemplateToShadow(template)
-      this._sandbox?.execScripts(scripts)
-    })()
+    const parent = this.parentElement
+    if (!parent || parent.tagName !== 'MICRO-CONTAINER') {
+      console.warn('[zan-micro]: ', 'The parent element of micro-app must be micro-container')
+    } else {
+      const container = parent as MicroContainer
+      // 将 app 注册到 micro-container
+      container.setupApp(this)
+      ;(async () => {
+        this.createShadow()
+        await this.createSandbox()
+        this.link()
+        const { template, scripts } = await loader(this.host, this.uri)
+        this.renderTemplateToShadow(template)
+        this._sandbox?.execScripts(scripts)
+      })()
+    }
   }
 
   attributeChangedCallback(name: string, oldVal: any, newVal: any) {
@@ -54,9 +63,15 @@ export class MicroApp extends HTMLElement {
   private renderTemplateToShadow(template: string) {
     const document = this._sandbox!.iframe!.contentDocument!
     const html = document.createElement('html')
-    html.innerHTML = template
-      .replace(/<!--([\s\S]*?)-->/g, '')
-      .replace(/(<script.*?\/?>(?:[\s\S]*?<\/script>)?)/g, '<!-- $1 -->')
+    html.innerHTML = template.replace(/<!--([\s\S]*?)-->/g, '').replace(/(<script.*?\/?>(?:[\s\S]*?<\/script>)?)/g, '')
+
+    Array.from(html.querySelectorAll('link')).forEach((link) => {
+      const href = link.getAttribute('href')
+      if (href) {
+        link.setAttribute('href', this.host + href)
+      }
+    })
+
     this._shadowRoot!.appendChild(html)
     // @ts-ignore
     this._shadowRoot!.head = this._shadowRoot?.querySelector('head')

@@ -99,6 +99,9 @@ export const documentProxyProperties = {
   ownerProperties: ['head', 'body'],
 }
 
+// 需要代理到基座应用的 window 属性
+export const windowProxyProperties: any[] = ['getComputedStyle', 'visualViewport', 'matchMedia', 'DOMParser']
+
 export const cssSelectorMap = {
   ':root': ':host',
 }

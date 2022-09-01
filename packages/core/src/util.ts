@@ -97,3 +97,18 @@ export function getPatchStyleElements(rootStyleSheets: Array<CSSStyleSheet>): Ar
 export function getAbsolutePath(url: string, base: string) {
   return new URL(url, base).href
 }
+
+const windowConstructorCache = new WeakSet()
+export function isConstructor(ctr: any) {
+  if (windowConstructorCache.has(ctr)) return true
+  if (ctr.prototype && Object.getOwnPropertyNames(ctr.prototype).length > 0 && ctr.prototype.constructor !== ctr) {
+    windowConstructorCache.add(ctr)
+    return true
+  }
+  const str = ctr.toString()
+  if (/^class\b/.test(str) || /^function\b\s[A-Z].*/.test(str)) {
+    windowConstructorCache.add(ctr)
+    return true
+  }
+  return false
+}
