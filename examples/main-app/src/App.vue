@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
-// import mc from '@/micro'
-// import { onMounted } from 'vue'
-//
-// mc.setupApp({
-//   name: 'vue3-app',
-//   host: 'http://localhost:7500',
-//   uri: '',
-//   keepAlive: true,
-// })
-//
-// onMounted(() => {
-//   mc.startApp('vue3-app')
-// })
+import { useAppStore } from './stores'
+
+const app = useAppStore()
+
+const toggle = () => {
+  if (app.activeApp === 'vue3') {
+    app.setActiveApp('preview')
+  } else {
+    app.setActiveApp('vue3')
+  }
+}
 </script>
 
 <template>
@@ -27,6 +25,7 @@ import HelloWorld from './components/HelloWorld.vue'
         <RouterLink to="/">Home</RouterLink>
         <RouterLink to="/micro">Micro</RouterLink>
       </nav>
+      <button @click="toggle">切换</button>
     </div>
   </header>
   <RouterView />

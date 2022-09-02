@@ -53,6 +53,9 @@ export class MicroApp extends HTMLElement implements App {
         const { template, scripts } = await loader(this.host, this.uri)
         this.renderTemplateToShadow(template)
         this._sandbox?.execScripts(scripts)
+        if (this._document && this._document.body) {
+          this._document.body.style.display = this._active ? 'block' : 'none'
+        }
       })()
     }
   }
@@ -95,10 +98,16 @@ export class MicroApp extends HTMLElement implements App {
   }
 
   public active() {
+    if (this._document && this._document.body) {
+      this._document.body.style.display = 'block'
+    }
     this._active = true
   }
 
   public sleep() {
+    if (this._document && this._document.body) {
+      this._document.body.style.display = 'none'
+    }
     this._active = false
   }
 

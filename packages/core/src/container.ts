@@ -26,6 +26,11 @@ export class MicroContainer extends HTMLElement {
 
   public setupApp(app: MicroApp) {
     this.microApps.set(app.name, app)
+    if (this._active === app.name) {
+      app.active()
+    } else {
+      app.sleep()
+    }
   }
 
   get active(): string {
@@ -33,7 +38,15 @@ export class MicroContainer extends HTMLElement {
   }
 
   set active(value: string) {
+    let app = this.microApps.get(this._active)
+    if (app) {
+      app.sleep()
+    }
     this._active = value
+    app = this.microApps.get(this._active)
+    if (app) {
+      app.active()
+    }
   }
 }
 
