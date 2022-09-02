@@ -7,6 +7,7 @@ import { MicroContainer } from './container'
 
 export type AppDocument = (Omit<ShadowRoot, 'host'> | Omit<Document, 'head' | 'body'>) & {
   host: Element
+  html: HTMLHtmlElement
   head: HTMLHeadElement
   body: HTMLBodyElement
 }
@@ -53,8 +54,9 @@ export class MicroApp extends HTMLElement implements App {
         const { template, scripts } = await loader(this.host, this.uri)
         this.renderTemplateToShadow(template)
         this._sandbox?.execScripts(scripts)
-        if (this._document && this._document.body) {
-          this._document.body.style.display = this._active ? 'block' : 'none'
+        if (this._document && this._document.html) {
+          this._document.html.style.transition = 'all .3s'
+          this._document.html.style.display = this._active ? 'block' : 'none'
         }
       })()
     }
@@ -73,6 +75,7 @@ export class MicroApp extends HTMLElement implements App {
     })
     const _document = this._document!
     _document.appendChild(html)
+    _document.html = html
     _document.head = _document.querySelector('head')!
     _document.body = _document.querySelector('body')!
 
@@ -98,15 +101,19 @@ export class MicroApp extends HTMLElement implements App {
   }
 
   public active() {
-    if (this._document && this._document.body) {
-      this._document.body.style.display = 'block'
+    if (this._document && this._document.html) {
+      this._document.html.style.display = 'block'
+      setTimeout(() => {
+        this._document!.html.style.opacity = '1'
+      })
     }
     this._active = true
   }
 
   public sleep() {
-    if (this._document && this._document.body) {
-      this._document.body.style.display = 'none'
+    if (this._document && this._document.html) {
+      this._document.html.style.display = 'none'
+      this._document.html.style.opacity = '0'
     }
     this._active = false
   }

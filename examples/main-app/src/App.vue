@@ -1,31 +1,20 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
 import { useAppStore } from './stores'
 
 const app = useAppStore()
-
-const toggle = () => {
-  if (app.activeApp === 'vue3') {
-    app.setActiveApp('preview')
-  } else {
-    app.setActiveApp('vue3')
-  }
-}
 </script>
 
 <template>
   <header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
-
     <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
+      <HelloWorld msg="Micro App" />
       <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/micro">Micro</RouterLink>
+        <a style="cursor: pointer" @click="app.setActiveApp('vue3')">Vue3</a>
+        <a style="cursor: pointer" @click="app.setActiveApp('preview')">Preview</a>
       </nav>
-      <button @click="toggle">切换</button>
     </div>
   </header>
   <RouterView />
