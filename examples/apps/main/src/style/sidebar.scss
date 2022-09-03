@@ -1,0 +1,48 @@
+@import 'variables';
+
+#app {
+  .aside {
+    height: 100vh;
+    overflow-y: auto;
+    position: relative;
+    background: $menuBgColor;
+    transition: width 0.28s;
+
+    // reset element-ui css
+    .horizontal-collapse-transition {
+      transition: width 0s ease-in-out;
+    }
+
+
+    .el-sub-menu>.el-sub-menu__title,
+    .el-menu-item {
+      &:hover {
+        background-color: $menuHoverBgColor !important;
+      }
+    }
+
+    .nest-menu,
+    .nest-menu .el-sub-menu>.el-sub-menu__title {
+      background-color: $subMenuBgColor !important;
+      &:hover {
+        background-color: $subMenuHoverBgColor !important;
+      }
+    }
+  }
+}
+
+.el-menu--vertical {
+
+  .el-menu {
+    .el-menu-item {
+      background-color: $menuBgColor !important;
+    }
+  }
+
+  .el-sub-menu>.el-sub-menu__title,
+  .el-menu-item {
+    &:hover {
+      background-color: $subMenuHoverBgColor !important;
+    }
+  }
+}

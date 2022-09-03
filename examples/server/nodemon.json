@@ -1,0 +1,6 @@
+{
+  "watch": ["src/**/*"],
+  "ext": ".ts",
+  "ignore": [],
+  "exec": "tsnd -r tsconfig-paths/register --respawn ./src/main.ts"
+}
