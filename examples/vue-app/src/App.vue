@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import HelloWorld from './components/HelloWorld.vue'
-import { loader } from "@zan-micro/core";
-import {onMounted} from "vue";
 
-onMounted(() => {
-  loader('http://127.0.0.1:5174/').then(res => {
-  })
-})
 </script>
 
 <template>

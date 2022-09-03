@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import Micro from './components/Micro.vue'
 import HelloWorld from './components/HelloWorld.vue'
 import { useAppStore } from './stores'
 
@@ -14,10 +14,11 @@ const app = useAppStore()
       <nav>
         <a style="cursor: pointer" @click="app.setActiveApp('vue3')">Vue3</a>
         <a style="cursor: pointer" @click="app.setActiveApp('preview')">Preview</a>
+        <a style="cursor: pointer" @click="app.setActiveApp('repl')">Repl</a>
       </nav>
     </div>
   </header>
-  <RouterView />
+  <Micro />
 </template>
 
 <style scoped>

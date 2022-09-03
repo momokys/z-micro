@@ -200,6 +200,16 @@ export class Sandbox {
         },
       })
     })
+
+    const desc = Object.getOwnPropertyDescriptor(sandboxWindow.window, 'history')!
+    Object.defineProperty(sandboxWindow.window, 'history', {
+      enumerable: desc.enumerable,
+      configurable: true,
+      set: undefined,
+      get(): any {
+        return window.history
+      }
+    })
   }
   /**
    * 修复元素引用资源时 404 问题
