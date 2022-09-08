@@ -1,0 +1,37 @@
+{
+  "name": "main-app",
+  "scripts": {
+    "dev": "vite",
+    "build": "run-p type-check build-only",
+    "preview": "vite preview --port 4173",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --noEmit",
+    "lint": "eslint  --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
+  },
+  "devDependencies": {
+    "@types/js-cookie": "^3.0.2",
+    "@types/node": "^18.7.14",
+    "@types/nprogress": "^0.2.0",
+    "mockjs": "^1.1.0",
+    "postcss": "^8.4.16",
+    "rollup": "^2.79.0",
+    "sass": "^1.54.8",
+    "unplugin-auto-import": "^0.11.2",
+    "unplugin-vue-components": "^0.22.4",
+    "vite": "^3.0.9",
+    "vite-plugin-mock": "^2.9.6",
+    "vite-plugin-windicss": "^1.8.7",
+    "windicss": "^3.5.6"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.0.9",
+    "@zan-micro/core": "workspace:^0.0.1",
+    "axios": "^0.27.2",
+    "element-plus": "^2.2.16",
+    "js-cookie": "^3.0.1",
+    "nprogress": "^0.2.0",
+    "pinia": "^2.0.17",
+    "vue": "^3.2.37",
+    "vue-router": "^4.1.3"
+  }
+}

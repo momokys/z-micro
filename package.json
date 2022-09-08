@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "bootstrap": "pnpm i",
+    "dev:server": "pnpm -F server run dev",
     "dev:main": "pnpm -F main-app run dev",
     "build": "pnpm run build -F zan-micro",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
@@ -38,6 +39,7 @@
     "prettier": "^2.5.1",
     "sass": "^1.50.0",
     "start-server-and-test": "^1.14.0",
+    "tsconfig-paths": "^4.1.0",
     "tsx": "^3.6.0",
     "typescript": "~4.7.4",
     "unbuild": "^0.8.10",
