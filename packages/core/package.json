@@ -1,5 +1,5 @@
 {
-  "name": "@zan-micro/core",
+  "name": "zan-micro-core",
   "version": "0.0.1-rc.1",
   "author": "momoky",
   "license": "MIT",
@@ -14,7 +14,6 @@
   ],
   "scripts": {
     "publish": "npm publish",
-    "unpublish": "npm unpublish @zan-micro/core@0.0.1-rc.1",
     "build": "run-s build:prod build:type",
     "build:type": "tsc --emitDeclarationOnly",
     "build:prod": "tsx build.ts"
