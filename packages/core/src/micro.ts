@@ -136,6 +136,3 @@ export class MicroApp extends HTMLElement implements App {
   }
 }
 
-export const defineMicroApp = () => {
-  window.customElements.define('micro-app', MicroApp)
-}

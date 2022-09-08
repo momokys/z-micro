@@ -5,6 +5,8 @@
   "license": "MIT",
   "main": "index.ts",
   "scripts": {
-    "build": "esbuild index.ts --bundle --outfile=./dist/index.js"
+    "build:type": "tsc --emitDeclarationOnly",
+    "build:prod": "tsx build.ts",
+    "build": "run-s build:prod build:type"
   }
 }

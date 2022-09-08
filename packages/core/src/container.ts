@@ -50,6 +50,3 @@ export class MicroContainer extends HTMLElement {
   }
 }
 
-export const defineMicroContainer = () => {
-  window.customElements.define('micro-container', MicroContainer)
-}
