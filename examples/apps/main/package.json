@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "main-app",
   "scripts": {
     "dev": "vite",

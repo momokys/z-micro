@@ -1,15 +1,9 @@
 {
-  "references": [
-    {
-      "path": "tsconfig.build.json"
-    }
-  ],
   "compilerOptions": {
+    "composite": true,
     "target": "ESNext",
     "module": "ESNext",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "declaration": true,
-    "declarationDir": "dist/types",
+    "lib": ["ESNext"],
     "moduleResolution": "Node",
     "esModuleInterop": true,
     "resolveJsonModule": true,
@@ -17,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["./src/**/*.ts"]
+  "include": ["build.ts"]
 }

@@ -20,6 +20,7 @@ export default defineConfig(({ mode }) => ({
     }),
     vueJsx(),
     AutoImport({
+      imports: ['vue', 'vue-router'],
       resolvers: [ElementPlusResolver()],
     }),
     Components({

@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "vue3-app",
   "scripts": {
     "dev": "vite",

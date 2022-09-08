@@ -6,7 +6,8 @@ const router: Router = new Router({
 })
 
 router.post('/user/login', async (ctx) => {
-  ctx.request.body = {
+  console.log('xxx')
+  ctx.body = {
     data: {
       token: 'momoky',
     },
@@ -15,7 +16,7 @@ router.post('/user/login', async (ctx) => {
 })
 
 router.get('/user/logout', async (ctx) => {
-  ctx.request.body = {
+  ctx.body = {
     data: {},
     code: 2000,
   }

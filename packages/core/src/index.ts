@@ -1,5 +1,5 @@
-import { MicroApp } from './src/micro'
-import { MicroContainer } from './src/container'
+import { MicroApp } from './micro'
+import { MicroContainer } from './container'
 
 // 注册自定义组件
 ;(() => {
@@ -7,5 +7,6 @@ import { MicroContainer } from './src/container'
   window.customElements.define('micro-container', MicroContainer)
 })()
 
-export * from './src/micro'
-export * from './src/container'
+export * from './micro'
+export * from './container'
+export * from './version'

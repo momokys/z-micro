@@ -1,12 +1,40 @@
 {
   "name": "@zan-micro/core",
-  "version": "0.0.1",
+  "version": "0.0.1-rc.1",
   "author": "momoky",
   "license": "MIT",
-  "main": "index.ts",
+  "description": "微前端框架",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist/cjs",
+    "dist/esm",
+    "dist/types"
+  ],
   "scripts": {
+    "publish": "npm publish",
+    "unpublish": "npm unpublish @zan-micro/core@0.0.1-rc.1",
+    "build": "run-s build:prod build:type",
     "build:type": "tsc --emitDeclarationOnly",
-    "build:prod": "tsx build.ts",
-    "build": "run-s build:prod build:type"
+    "build:prod": "tsx build.ts"
+  },
+  "keywords": [
+    "micro"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/momoky/zan-micro.git"
+  },
+  "homepage": "https://gitee.com/momoky/zan-micro.git",
+  "bugs": {
+    "url": "https://gitee.com/momoky/zan-micro.git"
+  },
+  "config": {
+    "unsafe-perm": true,
+    "registry": "https://registry.npmjs.org/"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

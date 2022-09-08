@@ -117,6 +117,12 @@ export class Sandbox {
   }
 
   /**
+   * 销毁沙箱
+   */
+  public destroy() {
+    this.iframe.remove()
+  }
+  /**
    * 生成代理 document
    * @private
    */

@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "server",
   "scripts": {
     "dev": "nodemon"

@@ -51,12 +51,15 @@ const rules = {
 const router = useRouter()
 async function login() {
   loading.value = true
-  await user.login(loginForm)
-  loading.value = false
-  ElMessage.success('欢迎登录西裤')
-  await router.push({
-    name: routeConfig.homeName,
-  })
+  try {
+    await user.login(loginForm)
+    ElMessage.success('欢迎登录西裤')
+    await router.push({
+      name: routeConfig.homeName,
+    })
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

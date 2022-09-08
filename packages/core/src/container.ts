@@ -33,6 +33,10 @@ export class MicroContainer extends HTMLElement {
     }
   }
 
+  public removeApp(app: MicroApp) {
+    this.microApps.delete(app.name)
+  }
+
   get active(): string {
     return this._active
   }
@@ -49,4 +53,3 @@ export class MicroContainer extends HTMLElement {
     }
   }
 }
-

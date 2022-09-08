@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
     redirect: '/home',
     children: [
       {
-        path: '',
+        path: ':chapters*',
         name: 'Micro',
         meta: {
           title: '首页',

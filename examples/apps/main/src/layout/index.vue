@@ -13,7 +13,7 @@
           <tags />
         </el-header>
         <el-main>
-          <router-view v-slot="{ Component }">
+          <router-view :key="route.name" v-slot="{ Component }">
             <z-view :com="Component" />
           </router-view>
         </el-main>
@@ -23,11 +23,13 @@
 </template>
 
 <script lang="ts" setup>
+import { useRoute } from 'vue-router'
 import { useSetting } from '@/store'
 import Sidebar from './sidebar/index.vue'
 import Navbar from './navbar/index.vue'
 import Tags from './tags/index.vue'
 
+const route = useRoute()
 const setting = useSetting()
 </script>
 

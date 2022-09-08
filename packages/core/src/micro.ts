@@ -20,6 +20,7 @@ export class MicroApp extends HTMLElement implements App {
   private _active: boolean
   private _sandbox?: Sandbox
   private _document?: AppDocument
+  private _container?: MicroContainer
 
   static get observedAttributes() {
     return ['name', 'host', 'uri', 'keepAlive']
@@ -44,6 +45,7 @@ export class MicroApp extends HTMLElement implements App {
     if (!parent || parent.tagName !== 'MICRO-CONTAINER') {
       console.warn('[zan-micro]: ', 'The parent element of micro-app must be micro-container')
     } else {
+      this._container = parent as MicroContainer
       this._document = this.attachShadow({ mode: 'open' }) as any
       const container = parent as MicroContainer
       container.setupApp(this)
@@ -60,6 +62,11 @@ export class MicroApp extends HTMLElement implements App {
         }
       })()
     }
+  }
+
+  disconnectedCallback() {
+    this._sandbox?.destroy()
+    this._container?.removeApp(this)
   }
 
   private renderTemplateToShadow(template: string) {

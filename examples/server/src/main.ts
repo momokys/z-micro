@@ -8,6 +8,7 @@ const app: Koa = new Koa()
 
 app.use(bodyParser())
 app.use(router.routes())
+app.use(router.allowedMethods())
 
 app.listen(config.port, () => {
   openDB()

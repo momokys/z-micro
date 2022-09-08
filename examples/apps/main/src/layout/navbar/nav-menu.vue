@@ -19,13 +19,20 @@
 </template>
 
 <script lang="ts" setup>
+import { useRoute, useRouter } from 'vue-router'
 import { useApp } from '@/store'
 
+const router = useRouter()
+const route = useRoute()
 const appStore = useApp()
 
 const onClick = (index: number) => {
-  console.log(index)
   appStore.setActiveApp(index)
+  if (route.name !== 'Micro') {
+    router.push({
+      name: 'Micro'
+    })
+  }
 }
 </script>
 

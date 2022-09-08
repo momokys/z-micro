@@ -1,11 +1,13 @@
 {
-  "version": "0.0.1",
+  "private": true,
+  "version": "0.0.0",
   "author": "momoky",
   "license": "MIT",
   "scripts": {
     "bootstrap": "pnpm i",
     "dev:server": "pnpm -F server run dev",
     "dev:main": "pnpm -F main-app run dev",
+    "dev:vue3": "pnpm -F vue3-app run dev",
     "build": "pnpm run build -F zan-micro",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
@@ -29,6 +31,7 @@
     "@vue/test-utils": "^2.0.0",
     "@vue/tsconfig": "^0.1.3",
     "esbuild": "^0.14.47",
+    "esbuild-plugin-d.ts": "^1.1.0",
     "esbuild-plugin-globals": "^0.1.1",
     "eslint": "^8.5.0",
     "eslint-plugin-vue": "^9.0.0",
