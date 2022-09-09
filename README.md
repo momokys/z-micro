@@ -1,39 +1,53 @@
-# zan-micro
+# z-micro
 
 #### 介绍
-{**以下是 Gitee 平台说明，您可以替换此简介**
-Gitee 是 OSCHINA 推出的基于 Git 的代码托管平台（同时支持 SVN）。专为开发者提供稳定、高效、安全的云端软件开发协作平台
-无论是个人、团队、或是企业，都能够用 Gitee 实现代码托管、项目管理、协作开发。企业项目请看 [https://gitee.com/enterprises](https://gitee.com/enterprises)}
-
-#### 软件架构
-软件架构说明
-
+基于 iframe 和 web component 的微前端框架。
+支持 vite 项目。
+支持多实例，可同时存在多个子应用。
 
 #### 安装教程
+```bash
+# npm
+npm install @z-micro/core
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+# yarn
+yarn add @z-micro/core
+
+# pnpm
+pnpm add @z-micro/core
+
+```
 
 #### 使用说明
+1、主应用导入 @z-micro/core
+```js
+import '@z-micro/core'
+```
+2、使用 micro-app 和 micro-container
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```html
 
-#### 参与贡献
+<micro-container active="vue3">
+  <micro-app name="vue3" host="http://localhost:7500" uri="vue3" />
+  <micro-app name="react" host="http://localhost:7600" uri="react" />
+</micro-container>
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+```
+
+#### 配置说明
+
+##### micro-container 属性
+
+| 属性     | 说明       |
+|--------|----------|
+| active | 当前激活的子应用 |
 
 
-#### 特技
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+##### micro-app 属性
+
+| 属性 | 说明                                              |
+| ---- | ------------------------------------------------- |
+| name | 子应用名称，同一个 container 下不能重复，不能为空 |
+| host | 子应用 html 入口地址，不能为空                    |
+| uri  | 前缀                                              |
